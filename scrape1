@@ -1,0 +1,39 @@
+import requests
+from bs4 import BeautifulSoup
+import re
+import json
+
+def scrape_product_details(url):
+    # Send HTTP request to the URL
+    response = requests.get(url)
+    # Parse the HTML content of the page
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Find the script tag containing the product data
+    # This regex looks for scripts containing 'ecomm_pagetype': 'ProductPage'
+    script = soup.find('script', text=re.compile(r"'ecomm_pagetype': 'ProductPage'"))
+    if script:
+        # Extract the JavaScript object as a string
+        json_str = re.search(r'dataLayer.push\((\{.*?\})\);', script.string, re.DOTALL)
+        if json_str:
+            # Parse the JSON string to a Python dictionary
+            data = json.loads(json_str.group(1))
+            
+            # Extracting individual elements
+            product_details = {
+                'Category': data.get('ecomm_pcat', ''),
+                'Product Name': data.get('ecomm_pname', ''),
+                'Product Value': data.get('ecomm_pvalue', ''),
+                'Total Value': data.get('ecomm_totalvalue', ''),
+                'Product ID': data.get('ecomm_prodid', '')
+            }
+            return product_details
+    return None
+
+# URL of the webpage to scrape
+url = "https://www.vanline.no/elektrisk"
+product_info = scrape_product_details(url)
+if product_info:
+    print("Product Details:", product_info)
+else:
+    print("No product details found.")
